@@ -22,14 +22,21 @@ bash# Clone the repo
 git clone https://github.com/YOUR_USERNAME/kanbanflow.git
 cd kanbanflow
 
-# Open in browser
-open index.html
-# or just double-click index.html
-You can also drag index.html straight into any browser window.
-
 📁 Project Structure
 kanbanflow/
 └── index.html      # Entire app — HTML + CSS + JS in one file
 └── README.md       # This file
 That's it. One file contains everything:
 SectionWhat's inside<head>Tailwind CDN, Google Fonts (Plus Jakarta Sans)<style>CSS variables, layout, component styles<body>Navbar, board columns, sidebar, modals<script>All app logic — state, render, drag/drop, modals
+
+🧰 Tech Stack
+TechWhyVanilla JS (ES2020)No framework overhead, runs anywhereCSS Custom PropertiesInstant theme switching without re-renderingTailwind CSS (CDN)Utility classes for rapid layoutPlus Jakarta SansClean, modern, readable typefaceHTML5 Drag & Drop APINative browser drag, no library neededlocalStorageZero-config persistence
+
+🐛 Known Limitations
+
+No real-time collaboration (single browser, single user)
+No undo/redo
+localStorage has a ~5MB limit (more than enough for thousands of tasks)
+Drag ghost image appearance varies slightly between browsers (Chrome vs Firefox vs Safari)
+
+
