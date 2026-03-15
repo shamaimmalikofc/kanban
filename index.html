@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>KanbanPro</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0b0d12;--surface:#111318;--s2:#181b23;--s3:#1e2230;
+  --border:rgba(255,255,255,.07);--b2:rgba(255,255,255,.11);
+  --text:#eaecf3;--t2:#a0a8bf;--muted:#525870;
+  --accent:#6366f1;--a2:#818cf8;
+  --red-bg:rgba(239,68,68,.1);--red-t:#f87171;
+  --yel-bg:rgba(245,158,11,.1);--yel-t:#fbbf24;
+  --grn-bg:rgba(34,197,94,.1);--grn-t:#4ade80;
+}
+.light{
+  --bg:#f0f2f8;--surface:#fff;--s2:#f5f6fb;--s3:#eceef6;
+  --border:rgba(0,0,0,.08);--b2:rgba(0,0,0,.13);
+  --text:#12141c;--t2:#4a5068;--muted:#9aa0b8;
+  --a2:#4f46e5;
+  --red-bg:rgba(239,68,68,.08);--red-t:#dc2626;
+  --yel-bg:rgba(245,158,11,.08);--yel-t:#d97706;
+  --grn-bg:rgba(34,197,94,.08);--grn-t:#16a34a;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Plus Jakarta Sans',sans-serif}
+body{background:var(--bg);color:var(--text);transition:background .3s,color .3s}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:99px}
+.hidden{display:none!important}
+
+/* Nav */
+#nav{position:sticky;top:0;z-index:40;background:var(--surface);border-bottom:1px solid var(--border);backdrop-filter:blur(16px)}
+#nav-inner{max-width:1440px;margin:0 auto;padding:0 24px;height:62px;display:flex;align-items:center;gap:12px}
+
+/* Search */
+.sw{position:relative}
+.sw svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted)}
+.sf{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 12px 8px 32px;font-size:13px;font-family:inherit;color:var(--text);outline:none;width:220px;transition:border-color .2s,width .3s}
+.sf::placeholder{color:var(--muted)}
+.sf:focus{border-color:var(--accent);width:280px}
+
+/* Buttons */
+.bi{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--s2);border:1px solid var(--border);cursor:pointer;transition:background .2s;color:var(--t2)}
+.bi:hover{background:var(--s3)}
+.bp{display:flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:0 16px;height:38px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,.3);transition:opacity .2s,transform .15s}
+.bp:hover{opacity:.9}
+.bp:active{transform:scale(.97)}
+.bg{background:var(--s2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:0 16px;height:38px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .2s}
+.bg:hover{background:var(--s3)}
+
+/* Layout */
+#layout{max-width:1440px;margin:0 auto;padding:22px;display:flex;gap:20px;align-items:flex-start}
+#board{flex:1;min-width:0;display:flex;gap:14px;align-items:stretch}
+
+/* Column */
+.kol{flex:1;min-width:265px;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden}
+.kol-head{padding:16px 16px 0}
+.kol-bar{height:3px;border-radius:99px;margin-bottom:14px}
+.kol-bar.red{background:linear-gradient(90deg,#ef4444,#f97316)}
+.kol-bar.yel{background:linear-gradient(90deg,#f59e0b,#eab308)}
+.kol-bar.grn{background:linear-gradient(90deg,#22c55e,#10b981)}
+.kol-title{display:flex;align-items:center;gap:8px;padding-bottom:13px;border-bottom:1px solid var(--border)}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot.red{background:#ef4444;box-shadow:0 0 6px #ef4444}
+.dot.yel{background:#f59e0b;box-shadow:0 0 6px #f59e0b}
+.dot.grn{background:#22c55e;box-shadow:0 0 6px #22c55e}
+.kol-lbl{font-size:13px;font-weight:700}
+.kol-n{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:99px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.kol-n.red{background:var(--red-bg);color:var(--red-t)}
+.kol-n.yel{background:var(--yel-bg);color:var(--yel-t)}
+.kol-n.grn{background:var(--grn-bg);color:var(--grn-t)}
+
+/* Drop zone — the key: events on the zone itself, not children */
+.zone{
+  flex:1;padding:12px;display:flex;flex-direction:column;gap:8px;
+  min-height:280px;overflow-y:auto;
+  transition:background .15s,outline .15s;
+  border-radius:0 0 18px 18px;
+  /* pointer-events always on zone */
+}
+.zone.over{background:rgba(99,102,241,.05);outline:2px dashed rgba(99,102,241,.4);outline-offset:-3px}
+
+/* Empty */
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:28px;pointer-events:none;user-select:none}
+.empty-ico{width:40px;height:40px;border-radius:11px;background:var(--s3);border:1px solid var(--b2);display:flex;align-items:center;justify-content:center}
+.empty p{font-size:12px;color:var(--muted);text-align:center;line-height:1.5}
+
+/* Card */
+.card{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:13px;cursor:grab;transition:transform .15s,box-shadow .15s,border-color .15s;flex-shrink:0;user-select:none}
+.card:hover{transform:translateY(-2px);box-shadow:0 6px 22px rgba(0,0,0,.18);border-color:rgba(99,102,241,.3)}
+.card.drag{opacity:.25;transform:scale(.96)}
+
+/* Pill */
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;border:1px solid transparent}
+.p-low{background:var(--grn-bg);color:var(--grn-t);border-color:rgba(34,197,94,.2)}
+.p-med{background:var(--yel-bg);color:var(--yel-t);border-color:rgba(245,158,11,.2)}
+.p-hi {background:var(--red-bg);color:var(--red-t);border-color:rgba(239,68,68,.2)}
+
+/* Dots menu */
+.dots{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;color:var(--muted);transition:background .15s}
+.dots:hover{background:var(--s3)}
+.mpop{display:none;position:absolute;right:0;top:28px;z-index:100;background:var(--surface);border:1px solid var(--b2);border-radius:12px;overflow:hidden;box-shadow:0 14px 36px rgba(0,0,0,.28);min-width:120px}
+.mpop.open{display:block}
+.mrow{display:flex;align-items:center;gap:8px;padding:9px 13px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text);transition:background .15s}
+.mrow:hover{background:var(--s2)}
+.mrow.del{color:var(--red-t)}
+
+/* Sidebar */
+#sb{width:248px;flex-shrink:0;display:flex;flex-direction:column;gap:11px}
+.sb-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px}
+.ring-wrap{position:relative;width:114px;height:114px;margin:12px auto 6px}
+.ring-t{fill:none;stroke:var(--s3);stroke-width:9}
+.ring-p{fill:none;stroke:var(--accent);stroke-width:9;stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .7s cubic-bezier(.4,0,.2,1);filter:drop-shadow(0 0 7px rgba(99,102,241,.5))}
+.ring-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:13px 15px;display:flex;align-items:center;justify-content:space-between}
+.stat:hover{border-color:var(--b2)}
+.stat-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);display:block;margin-bottom:2px}
+.stat-n{font-size:24px;font-weight:800;line-height:1}
+.stat-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
+
+/* Modal */
+#mwrap{display:none;position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:16px}
+#mwrap.open{display:flex}
+#modal,#pmwrap-inner{background:var(--surface);border:1px solid var(--b2);border-radius:20px;width:100%;max-width:440px;padding:26px;box-shadow:0 36px 90px rgba(0,0,0,.45)}
+.mf{background:var(--s2);border:1px solid var(--border);border-radius:10px;width:100%;padding:10px 13px;font-size:14px;font-family:inherit;color:var(--text);outline:none;transition:border-color .2s}
+.mf:focus{border-color:var(--accent)}
+.mf::placeholder{color:var(--muted)}
+select.mf option{background:var(--surface)}
+.ml{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);display:block;margin-bottom:6px}
+
+/* Project picker modal */
+#pmwrap{display:none;position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:16px}
+#pmwrap.open{display:flex}
+.proj-item{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-radius:11px;border:1px solid var(--border);background:var(--s2);cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:7px}
+.proj-item:hover,.proj-item.active{border-color:var(--accent);background:var(--s3)}
+.proj-item:last-child{margin-bottom:0}
+
+@media(max-width:860px){
+  #layout{flex-direction:column}
+  #sb{width:100%}
+  #board{overflow-x:auto}
+  .kol{min-width:250px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div id="nav">
+  <div id="nav-inner">
+    <div style="display:flex;align-items:center;gap:9px;flex-shrink:0;margin-right:4px">
+      <div style="width:33px;height:33px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(99,102,241,.4)">
+        <svg width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+      </div>
+      <span style="font-size:17px;font-weight:800;letter-spacing:-.3px">KanbanPro</span>
+    </div>
+    <div class="sw">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="search" class="sf" type="text" placeholder="Search tasks…"/>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      <div style="width:1px;height:20px;background:var(--b2)"></div>
+      <button id="theme-btn" class="bi" title="Toggle theme">
+        <svg id="ico-moon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg id="ico-sun" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="hidden"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+      <button id="new-proj-btn" class="bp">
+        <svg width="12" height="12" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        New Project
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div id="layout">
+
+  <!-- Board -->
+  <div style="flex:1;min-width:0">
+    <!-- Section header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <h1 style="font-size:18px;font-weight:800;letter-spacing:-.3px">Projects</h1>
+        <button id="proj-picker-btn" class="bi" style="width:30px;height:30px;border-radius:8px" title="Switch project">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <span id="proj-name-display" style="font-size:13px;font-weight:600;color:var(--muted)"></span>
+      </div>
+      <button id="add-task-btn" class="bp" style="font-size:12px;height:34px;padding:0 13px">
+        <svg width="11" height="11" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Add New Task
+      </button>
+    </div>
+
+    <!-- Columns -->
+    <div id="board">
+      <div class="kol">
+        <div class="kol-head">
+          <div class="kol-bar red"></div>
+          <div class="kol-title"><div class="dot red"></div><span class="kol-lbl">Yet to Start</span><span id="cnt-todo" class="kol-n red">0</span></div>
+        </div>
+        <div id="col-todo" class="zone" data-col="todo"></div>
+      </div>
+      <div class="kol">
+        <div class="kol-head">
+          <div class="kol-bar yel"></div>
+          <div class="kol-title"><div class="dot yel"></div><span class="kol-lbl">In Progress</span><span id="cnt-inprogress" class="kol-n yel">0</span></div>
+        </div>
+        <div id="col-inprogress" class="zone" data-col="inprogress"></div>
+      </div>
+      <div class="kol">
+        <div class="kol-head">
+          <div class="kol-bar grn"></div>
+          <div class="kol-title"><div class="dot grn"></div><span class="kol-lbl">Completed</span><span id="cnt-completed" class="kol-n grn">0</span></div>
+        </div>
+        <div id="col-completed" class="zone" data-col="completed"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div id="sb">
+    <div class="sb-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div>
+          <span class="lbl">Project</span>
+          <p id="sb-proj-name" style="font-size:15px;font-weight:800;margin-top:3px;letter-spacing:-.2px">—</p>
+        </div>
+        <div style="width:32px;height:32px;background:var(--grn-bg);border-radius:9px;display:flex;align-items:center;justify-content:center">
+          <svg width="14" height="14" fill="none" stroke="var(--grn-t)" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+      </div>
+      <div class="ring-wrap">
+        <svg viewBox="0 0 100 100" style="width:100%;height:100%">
+          <circle class="ring-t" cx="50" cy="50" r="40"/>
+          <circle id="ring" class="ring-p" cx="50" cy="50" r="40" stroke-dasharray="251.3" stroke-dashoffset="251.3"/>
+        </svg>
+        <div class="ring-c">
+          <span id="ring-pct" style="font-size:22px;font-weight:800;line-height:1">0%</span>
+          <span style="font-size:10px;color:var(--muted);margin-top:2px">complete</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:2px 2px 0"><span class="lbl">Overview</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+      <div class="stat" style="grid-column:1/-1">
+        <div><span class="stat-lbl">Total</span><span id="s-total" class="stat-n">0</span></div>
+        <div class="stat-ico" style="background:rgba(99,102,241,.12)"><svg width="15" height="15" fill="none" stroke="var(--a2)" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/></svg></div>
+      </div>
+      <div class="stat">
+        <div><span class="stat-lbl" style="color:var(--red-t)">Waiting</span><span id="s-todo" class="stat-n" style="color:var(--red-t)">0</span></div>
+        <div class="stat-ico" style="background:var(--red-bg)"><svg width="14" height="14" fill="none" stroke="var(--red-t)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+      </div>
+      <div class="stat">
+        <div><span class="stat-lbl" style="color:var(--yel-t)">Active</span><span id="s-inp" class="stat-n" style="color:var(--yel-t)">0</span></div>
+        <div class="stat-ico" style="background:var(--yel-bg)"><svg width="14" height="14" fill="none" stroke="var(--yel-t)" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.18-3.5"/></svg></div>
+      </div>
+      <div class="stat" style="grid-column:1/-1">
+        <div><span class="stat-lbl" style="color:var(--grn-t)">Done</span><span id="s-done" class="stat-n" style="color:var(--grn-t)">0</span></div>
+        <div class="stat-ico" style="background:var(--grn-bg)"><svg width="14" height="14" fill="none" stroke="var(--grn-t)" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TASK MODAL -->
+<div id="mwrap" onclick="if(event.target===this)closeModal()">
+  <div id="modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div><p id="modal-title" style="font-size:17px;font-weight:800">New Task</p><p style="font-size:12px;color:var(--muted);margin-top:1px">Fill in the details below</p></div>
+      <button onclick="closeModal()" class="bi" style="width:30px;height:30px;border-radius:8px"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:13px">
+      <div><label class="ml">Title <span style="color:var(--red-t)">*</span></label><input id="f-title" class="mf" type="text" placeholder="Task title"/></div>
+      <div><label class="ml">Description</label><textarea id="f-desc" class="mf" rows="3" style="resize:none" placeholder="Brief description…"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label class="ml">Priority</label><select id="f-priority" class="mf"><option value="low">🟢 Low</option><option value="medium" selected>🟡 Medium</option><option value="high">🔴 High</option></select></div>
+        <div><label class="ml">Column</label><select id="f-col" class="mf"><option value="todo">Yet to Start</option><option value="inprogress">In Progress</option><option value="completed">Completed</option></select></div>
+      </div>
+      <div style="display:flex;gap:8px;padding-top:2px">
+        <button id="btn-save" class="bp" style="flex:1;justify-content:center">Save Task</button>
+        <button onclick="closeModal()" class="bg" style="flex:1">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROJECT MODAL -->
+<div id="pmwrap" onclick="if(event.target===this)closeProjModal()">
+  <div id="pmwrap-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <p id="pm-title" style="font-size:17px;font-weight:800">Projects</p>
+      <button onclick="closeProjModal()" class="bi" style="width:30px;height:30px;border-radius:8px"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div id="proj-list" style="margin-bottom:14px;max-height:260px;overflow-y:auto"></div>
+    <div style="border-top:1px solid var(--border);padding-top:13px">
+      <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px">Create New Project</p>
+      <div style="display:flex;gap:8px">
+        <input id="new-proj-name" class="mf" type="text" placeholder="Project name…" style="flex:1"/>
+        <button id="create-proj-btn" class="bp" style="padding:0 14px">Create</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Data ──
+const SK = 'kf4';
+let state = JSON.parse(localStorage.getItem(SK) || 'null') || {
+  projects: [
+    { id: uid(), name: 'Website Redesign', tasks: [
+      {id:uid(),title:'Define project scope',   desc:'Outline deliverables and milestones.',          priority:'high',  col:'todo'},
+      {id:uid(),title:'Create wireframes',       desc:'Sketch low-fidelity dashboard frames.',         priority:'medium',col:'todo'},
+      {id:uid(),title:'Set up CI/CD pipeline',   desc:'Configure GitHub Actions for deployment.',      priority:'high',  col:'inprogress'},
+      {id:uid(),title:'Design component library',desc:'Build reusable UI components in Figma.',        priority:'medium',col:'inprogress'},
+      {id:uid(),title:'Write API documentation', desc:'Document REST endpoints with OpenAPI spec.',    priority:'low',   col:'completed'},
+      {id:uid(),title:'User research interviews',desc:'Conducted 8 interviews, synthesised findings.', priority:'high',  col:'completed'},
+    ]},
+    { id: uid(), name: 'Mobile App', tasks: [] },
+  ],
+  activeId: null
+};
+state.activeId = state.activeId || state.projects[0]?.id;
+
+function uid(){ return crypto.randomUUID() }
+function save(){ localStorage.setItem(SK, JSON.stringify(state)) }
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+function activeProj(){ return state.projects.find(p=>p.id===state.activeId) }
+
+let editId=null, dragId=null;
+
+// ── Render board ──
+function render(q=''){
+  const proj = activeProj();
+  const tasks = proj ? proj.tasks : [];
+  document.getElementById('sb-proj-name').textContent = proj ? proj.name : '—';
+  document.getElementById('proj-name-display').textContent = proj ? proj.name : '';
+
+  const q2 = q.trim().toLowerCase();
+  const cols = {todo:[],inprogress:[],completed:[]};
+  tasks.forEach(t=>{
+    if(!q2 || t.title.toLowerCase().includes(q2) || t.desc.toLowerCase().includes(q2)) cols[t.col]?.push(t);
+  });
+
+  for(const col in cols){
+    const el = document.getElementById('col-'+col);
+    el.innerHTML = '';
+    if(!cols[col].length){
+      el.innerHTML=`<div class="empty"><div class="empty-ico"><svg width="16" height="16" fill="none" stroke="var(--muted)" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg></div><p>No tasks.<br/>Drop or add new.</p></div>`;
+    } else {
+      cols[col].forEach(t=>el.appendChild(mkCard(t)));
+    }
+    document.getElementById('cnt-'+col).textContent = cols[col].length;
+  }
+
+  const tot=tasks.length, done=tasks.filter(t=>t.col==='completed').length, pct=tot?Math.round(done/tot*100):0;
+  document.getElementById('s-total').textContent=tot;
+  document.getElementById('s-todo').textContent=tasks.filter(t=>t.col==='todo').length;
+  document.getElementById('s-inp').textContent=tasks.filter(t=>t.col==='inprogress').length;
+  document.getElementById('s-done').textContent=done;
+  document.getElementById('ring-pct').textContent=pct+'%';
+  document.getElementById('ring').style.strokeDashoffset=251.3-(pct/100)*251.3;
+}
+
+// ── Card ──
+function mkCard(t){
+  const pc={low:['p-low','● Low'],medium:['p-med','● Med'],high:['p-hi','● High']}[t.priority]||['p-med','● Med'];
+  const d=document.createElement('div');
+  d.className='card'; d.draggable=true; d.dataset.id=t.id;
+  d.innerHTML=`
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:9px">
+      <span class="pill ${pc[0]}">${pc[1]}</span>
+      <div style="position:relative;flex-shrink:0">
+        <button class="dots" data-id="${t.id}"><svg width="15" height="15" fill="var(--muted)" viewBox="0 0 20 20"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg></button>
+        <div class="mpop" id="m-${t.id}">
+          <div class="mrow edit-it" data-id="${t.id}"><svg width="12" height="12" fill="none" stroke="var(--a2)" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>Edit</div>
+          <div class="mrow del del-it" data-id="${t.id}"><svg width="12" height="12" fill="none" stroke="var(--red-t)" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>Delete</div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:13.5px;font-weight:700;line-height:1.4;margin-bottom:${t.desc?'6px':'0'}">${esc(t.title)}</p>
+    ${t.desc?`<p style="font-size:12px;color:var(--t2);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(t.desc)}</p>`:''}
+  `;
+
+  // ── Drag fix: store id in dataTransfer, not a module-scope var ──
+  d.addEventListener('dragstart', e=>{
+    dragId = t.id;
+    e.dataTransfer.setData('text/plain', t.id); // required for Firefox
+    e.dataTransfer.effectAllowed = 'move';
+    // Defer opacity so ghost image captures normal card first
+    setTimeout(()=>d.classList.add('drag'), 0);
+  });
+  d.addEventListener('dragend', ()=>{ d.classList.remove('drag'); dragId=null; });
+  return d;
+}
+
+// ── Drag & Drop — zones are the columns, children are ignored ──
+function setupZones(){
+  document.querySelectorAll('.zone').forEach(zone=>{
+    zone.addEventListener('dragover', e=>{
+      e.preventDefault();
+      e.dataTransfer.dropEffect='move';
+      zone.classList.add('over');
+    });
+    // relatedTarget check: only remove highlight if truly leaving this zone
+    zone.addEventListener('dragleave', e=>{
+      if(!zone.contains(e.relatedTarget)) zone.classList.remove('over');
+    });
+    zone.addEventListener('drop', e=>{
+      e.preventDefault();
+      zone.classList.remove('over');
+      const id = e.dataTransfer.getData('text/plain') || dragId;
+      const proj = activeProj(); if(!proj) return;
+      const t = proj.tasks.find(x=>x.id===id);
+      if(t){ t.col=zone.dataset.col; save(); render(document.getElementById('search').value); }
+    });
+  });
+}
+
+// ── Task modal ──
+function openModal(task=null){
+  editId=task?.id||null;
+  document.getElementById('modal-title').textContent=task?'Edit Task':'New Task';
+  document.getElementById('f-title').value=task?.title||'';
+  document.getElementById('f-desc').value=task?.desc||'';
+  document.getElementById('f-priority').value=task?.priority||'medium';
+  document.getElementById('f-col').value=task?.col||'todo';
+  document.getElementById('mwrap').classList.add('open');
+  setTimeout(()=>document.getElementById('f-title').focus(),50);
+}
+function closeModal(){ document.getElementById('mwrap').classList.remove('open'); editId=null; }
+
+function saveTask(){
+  const title=document.getElementById('f-title').value.trim();
+  if(!title){ document.getElementById('f-title').focus(); return; }
+  const proj=activeProj(); if(!proj) return;
+  const p={title,desc:document.getElementById('f-desc').value.trim(),priority:document.getElementById('f-priority').value,col:document.getElementById('f-col').value};
+  if(editId){ const i=proj.tasks.findIndex(t=>t.id===editId); if(i>-1) proj.tasks[i]={...proj.tasks[i],...p}; }
+  else proj.tasks.push({id:uid(),...p});
+  save(); closeModal(); render(document.getElementById('search').value);
+}
+
+// ── Project modal ──
+function openProjModal(){
+  renderProjList();
+  document.getElementById('pmwrap').classList.add('open');
+}
+function closeProjModal(){ document.getElementById('pmwrap').classList.remove('open'); }
+
+function renderProjList(){
+  const list=document.getElementById('proj-list');
+  list.innerHTML='';
+  state.projects.forEach(p=>{
+    const item=document.createElement('div');
+    item.className='proj-item'+(p.id===state.activeId?' active':'');
+    const done=p.tasks.filter(t=>t.col==='completed').length;
+    item.innerHTML=`
+      <div>
+        <p style="font-size:14px;font-weight:700">${esc(p.name)}</p>
+        <p style="font-size:11px;color:var(--muted);margin-top:1px">${p.tasks.length} task${p.tasks.length!==1?'s':''} · ${done} done</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        ${p.id===state.activeId?`<span style="font-size:10px;font-weight:700;background:rgba(99,102,241,.15);color:var(--a2);padding:2px 8px;border-radius:99px">Active</span>`:''}
+        <button class="del-proj bi" data-pid="${p.id}" style="width:28px;height:28px;border-radius:7px" title="Delete project"><svg width="12" height="12" fill="none" stroke="var(--red-t)" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+      </div>
+    `;
+    item.addEventListener('click', e=>{
+      if(e.target.closest('.del-proj')) return;
+      state.activeId=p.id; save(); render(); closeProjModal();
+    });
+    list.appendChild(item);
+  });
+}
+
+function createProject(){
+  const name=document.getElementById('new-proj-name').value.trim();
+  if(!name) return;
+  const p={id:uid(),name,tasks:[]};
+  state.projects.push(p);
+  state.activeId=p.id;
+  document.getElementById('new-proj-name').value='';
+  save(); render(); renderProjList();
+}
+
+// ── Global click ──
+document.addEventListener('click', e=>{
+  document.querySelectorAll('.mpop.open').forEach(m=>m.classList.remove('open'));
+  const dots=e.target.closest('.dots');
+  if(dots){ document.getElementById('m-'+dots.dataset.id)?.classList.toggle('open'); return; }
+  const ei=e.target.closest('.edit-it');
+  if(ei){ const p=activeProj(); if(p) openModal(p.tasks.find(x=>x.id===ei.dataset.id)); return; }
+  const di=e.target.closest('.del-it');
+  if(di){
+    const p=activeProj(); if(!p) return;
+    const t=p.tasks.find(x=>x.id===di.dataset.id);
+    if(t&&confirm(`Delete "${t.title}"?`)){ p.tasks=p.tasks.filter(x=>x.id!==di.dataset.id); save(); render(document.getElementById('search').value); }
+    return;
+  }
+  const dp=e.target.closest('.del-proj');
+  if(dp){
+    const pid=dp.dataset.pid;
+    const proj=state.projects.find(x=>x.id===pid);
+    if(proj&&confirm(`Delete project "${proj.name}"?`)){
+      state.projects=state.projects.filter(x=>x.id!==pid);
+      if(state.activeId===pid) state.activeId=state.projects[0]?.id||null;
+      save(); render(); renderProjList();
+    }
+  }
+});
+
+// ── Theme ──
+function applyTheme(dark){
+  document.documentElement.classList.toggle('dark',dark);
+  document.body.classList.toggle('light',!dark);
+  document.getElementById('ico-moon').classList.toggle('hidden',!dark);
+  document.getElementById('ico-sun').classList.toggle('hidden',dark);
+  localStorage.setItem('kf4_t',dark?'dark':'light');
+}
+
+// ── Wiring ──
+document.getElementById('new-proj-btn').onclick=openProjModal;
+document.getElementById('proj-picker-btn').onclick=openProjModal;
+document.getElementById('add-task-btn').onclick=()=>openModal();
+document.getElementById('btn-save').onclick=saveTask;
+document.getElementById('create-proj-btn').onclick=createProject;
+document.getElementById('new-proj-name').addEventListener('keydown',e=>{ if(e.key==='Enter') createProject(); });
+document.getElementById('theme-btn').onclick=()=>applyTheme(!document.documentElement.classList.contains('dark'));
+document.getElementById('search').addEventListener('input',e=>render(e.target.value));
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ closeModal(); closeProjModal(); }
+  if(e.key==='Enter'&&!e.shiftKey&&document.getElementById('mwrap').classList.contains('open')) saveTask();
+});
+
+// ── Init ──
+applyTheme(localStorage.getItem('kf4_t')!=='light');
+setupZones();
+render();
+</script>
+</body>
+</html>
