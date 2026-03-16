@@ -19,7 +19,7 @@ Keyboard shortcuts — Enter to save modal, Escape to close
 -->Getting Started
 No build step. No install. Just open the file.
 bash# Clone the repo
-git clone https://github.com/YOUR_USERNAME/kanbanflow.git
+git clone https://github.com/shamaimmalikofc/kanbanflow.git
 cd kanbanflow
 
 📁 Project Structure
